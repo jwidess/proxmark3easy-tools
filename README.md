@@ -75,11 +75,17 @@ Windows batch files are located in the repo root:
    .\scripts\setup-wsl-environment.ps1
    ```
    *This automatically installs `usbipd` (via winget if needed), installs all required Ubuntu packages, and configures udev permissions.*
+   By default, Proxmark3 source is looked for at `Documents\GitHub\proxmark3` on Windows. To use another location, pass `-Proxmark3Path`, for example:
+   ```powershell
+   .\scripts\setup-wsl-environment.ps1 -Proxmark3Path "D:\repos\proxmark3"
+   ```
 
 4. **Verify and Flash:**
    - Run `.\detect-device.bat` to confirm your device is detected.
    - Run `.\flash-firmware.bat` to flash the precompiled firmware.
    - Run `.\start-pm3.bat`
+
+   If Windows asks for a restart while enabling WSL, restart then run the setup script again. On Ubuntu's first launch, complete the requested username and password prompts, setup then continues automatically. If Ubuntu has no normal user, create one with `wsl.exe -d Ubuntu -u root adduser <username>` and add it to `sudo` with `wsl.exe -d Ubuntu -u root usermod -aG sudo <username>`, then rerun setup.
 
 ---
 
@@ -87,7 +93,7 @@ Windows batch files are located in the repo root:
 
 To update from the latest upstream Iceman fork:
 
-1. Run **`.\update-firmware.bat`** (pulls upstream `~/proxmark3`, compiles, updates `firmware/`, and optionally flashes).
+1. Run **`.\update-firmware.bat`** (pulls the upstream Proxmark3 source from `Documents\GitHub\proxmark3`, compiles, updates `firmware/`, and optionally flashes). To use another checkout, run e.g. `.\scripts\update-firmware.ps1 -Proxmark3Path "D:\repos\proxmark3"`. The update runs as your normal WSL user, it adds this Windows-mounted checkout to Git's safe-directory list rather than running the build as root.
 2. Commit the updated binaries, and update this README and the `FIRMWARE_INFO.md` file with the new build info.
 
 ---

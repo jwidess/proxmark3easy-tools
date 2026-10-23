@@ -2,7 +2,12 @@
 set -e
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-FIRMWARE_DIR="${1:-$SCRIPT_DIR/../firmware}"
+FIRMWARE_DIR="$SCRIPT_DIR/../firmware"
+
+if [ -n "$1" ] && [ -d "$1" ]; then
+    FIRMWARE_DIR="$1"
+    shift
+fi
 
 BOOTROM="$FIRMWARE_DIR/bootrom.elf"
 FULLIMAGE="$FIRMWARE_DIR/fullimage.elf"
@@ -43,18 +48,30 @@ proxmark3 "$PORT" --flash --unlock-bootloader --image "$BOOTROM" --image "$FULLI
 
 echo ""
 echo "[+] Flashing completed successfully!"
-echo "[*] Waiting 3 seconds for device to re-enumerate..."
-sleep 3
+echo "[*] Waiting for device to re-enumerate..."
 
-# Trigger udev refresh
-udevadm trigger --action=change 2>/dev/null || true
+NEW_PORT=""
+for i in $(seq 1 8); do
+    sleep 1
+    udevadm trigger --action=change 2>/dev/null || true
+    for p in /dev/pm3* /dev/ttyACM*; do
+        if [ -c "$p" ]; then
+            NEW_PORT="$p"
+            break 2
+        fi
+    done
+done
 
-NEW_PORT=$(ls /dev/pm3* /dev/ttyACM* 2>/dev/null | head -n 1 || true)
 if [ -n "$NEW_PORT" ]; then
+    sleep 1
     echo "[*] Verifying hardware version on $NEW_PORT..."
-    proxmark3 "$NEW_PORT" -c "hw version" || true
+    if ! proxmark3 "$NEW_PORT" -c "hw version"; then
+        sleep 2
+        proxmark3 "$NEW_PORT" -c "hw version" || true
+    fi
 else
-    echo "[*] Device re-enumerating. Check 'hw version' shortly."
+    echo "[*] Flashing succeeded. Device has not re-enumerated yet."
+    echo "    Run 'check-hardware.bat' shortly to verify."
 fi
 
 echo ""

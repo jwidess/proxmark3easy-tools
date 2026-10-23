@@ -7,6 +7,7 @@ set -e
 REPO_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 FIRMWARE_DIR="$REPO_DIR/firmware"
 PM3_SRC="${1:-$HOME/proxmark3}"
+BUILD_DATE="${2:-$(date "+%B %d, %Y at %I:%M %p")}"
 
 echo "=========================================="
 echo " Proxmark3 Easy: Update & Compile Firmware"
@@ -19,20 +20,43 @@ echo ""
 if [ ! -d "$PM3_SRC" ]; then
     echo "[!] Proxmark3 source repository not found at '$PM3_SRC'."
     echo "[*] The Iceman fork repository is large (~300MB+ download)."
-    read -r -p "Would you like to clone it from GitHub now? [y/N]: " CONFIRM < /dev/tty 2>/dev/null || read -r -p "Would you like to clone it from GitHub now? [y/N]: " CONFIRM
+    printf "Would you like to clone it from GitHub now? [y/N]: "
+    if [ -r /dev/tty ]; then
+        read -r CONFIRM < /dev/tty
+    else
+        read -r CONFIRM
+    fi
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
         echo "[!] Clone cancelled by user. Update aborted."
         exit 1
     fi
     echo "[*] Cloning Iceman fork to $PM3_SRC..."
-    git clone https://github.com/RfidResearchGroup/proxmark3.git "$PM3_SRC"
+    if [[ "$PM3_SRC" == /mnt/* ]]; then
+        if ! command -v git.exe >/dev/null 2>&1; then
+            echo "[!] Git for Windows (git.exe) is required to clone into a Windows-mounted path."
+            echo "    Install Git for Windows or choose a path inside the WSL filesystem."
+            exit 1
+        fi
+        windowsPath=$(wslpath -w "$PM3_SRC")
+        git.exe -c core.autocrlf=false -c core.filemode=false clone https://github.com/RfidResearchGroup/proxmark3.git "$windowsPath"
+        git -C "$PM3_SRC" config core.autocrlf false
+        git -C "$PM3_SRC" config core.filemode false
+    else
+        git clone https://github.com/RfidResearchGroup/proxmark3.git "$PM3_SRC"
+    fi
 fi
 
 cd "$PM3_SRC"
 
+if [[ "$PM3_SRC" == /mnt/* ]]; then
+    if ! git config --global --get-all safe.directory 2>/dev/null | grep -Fxq "$PM3_SRC"; then
+        git config --global --add safe.directory "$PM3_SRC"
+    fi
+fi
+
 # 1. Pull latest Iceman fork changes
 echo "[1/5] Pulling latest upstream commits..."
-git checkout master
+git checkout -q master
 git pull
 
 NEW_COMMIT=$(git rev-parse --short HEAD)
@@ -74,8 +98,6 @@ cp -v Makefile.platform "$FIRMWARE_DIR/"
 
 # Update FIRMWARE_INFO.md metadata
 INFO_FILE="$FIRMWARE_DIR/FIRMWARE_INFO.md"
-TODAY=$(date "+%B %d, %Y")
-
 cat << EOF > "$INFO_FILE"
 # Firmware Information & Build Manifest
 
@@ -90,7 +112,7 @@ This document records the firmware version and build parameters compiled and fla
 | **Firmware Branch/Tag** | \`$NEW_TAG\` |
 | **Upstream Git Commit** | [\`$NEW_COMMIT\`](https://github.com/RfidResearchGroup/proxmark3/commit/$NEW_COMMIT) |
 | **Upstream Repository** | [RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3) |
-| **Compilation Date** | $TODAY |
+| **Compilation Date** | $BUILD_DATE |
 | **ARM Toolchain** | \`$(arm-none-eabi-gcc --version | head -n 1)\` |
 | **Host Compiler** | \`$(gcc --version | head -n 1)\` |
 
@@ -132,15 +154,37 @@ echo ""
 
 PORT=$(ls /dev/pm3* /dev/ttyACM* 2>/dev/null | head -n 1 || true)
 if [ -n "$PORT" ]; then
-    read -r -p "Proxmark3 detected on $PORT. Flash new firmware now? [y/N]: " CONFIRM
+    printf "Proxmark3 detected on %s. Flash new firmware now? [y/N]: " "$PORT"
+    if [ -r /dev/tty ]; then
+        read -r CONFIRM < /dev/tty
+    else
+        read -r CONFIRM
+    fi
     if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
         echo "[*] Flashing device on $PORT..."
         proxmark3 "$PORT" --flash --unlock-bootloader --image "$FIRMWARE_DIR/bootrom.elf" --image "$FIRMWARE_DIR/fullimage.elf"
-        echo "[+] Flash complete. Verifying hw version..."
-        sleep 3
-        udevadm trigger --action=change 2>/dev/null || true
-        NEW_PORT=$(ls /dev/pm3* /dev/ttyACM* 2>/dev/null | head -n 1 || true)
-        [ -n "$NEW_PORT" ] && proxmark3 "$NEW_PORT" -c "hw version" || true
+        echo "[+] Flash complete. Waiting for device to re-enumerate..."
+        NEW_PORT=""
+        for i in $(seq 1 8); do
+            sleep 1
+            udevadm trigger --action=change 2>/dev/null || true
+            for p in /dev/pm3* /dev/ttyACM*; do
+                if [ -c "$p" ]; then
+                    NEW_PORT="$p"
+                    break 2
+                fi
+            done
+        done
+        if [ -n "$NEW_PORT" ]; then
+            sleep 1
+            echo "[*] Verifying hardware version on $NEW_PORT..."
+            if ! proxmark3 "$NEW_PORT" -c "hw version"; then
+                sleep 2
+                proxmark3 "$NEW_PORT" -c "hw version" || true
+            fi
+        else
+            echo "[*] Device is still re-enumerating. Check 'hw version' shortly."
+        fi
     fi
 else
     echo "[*] Proxmark3 is not currently attached in WSL."

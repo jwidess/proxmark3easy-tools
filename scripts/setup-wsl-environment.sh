@@ -33,19 +33,42 @@ LABEL="pm3_ignore"
 LABEL="pm3_usb_device_blacklist_end"
 EOF
 
-sudo service udev restart
+if sudo service udev restart 2>/dev/null; then
+    echo "[+] udev service restarted."
+else
+    echo "[*] udev.service is not available in this WSL instance; refreshing device rules directly."
+fi
 sudo udevadm trigger --action=change || true
 
 echo ""
-echo "[4/4] Checking Proxmark3 repo in ~/proxmark3..."
-if [ ! -d "$HOME/proxmark3" ]; then
-    echo "[!] Proxmark3 repository not found in $HOME/proxmark3."
+PM3_SRC="${1:-$HOME/proxmark3}"
+echo "[4/4] Checking Proxmark3 repo in $PM3_SRC..."
+if [ ! -d "$PM3_SRC" ]; then
+    echo "[!] Proxmark3 repository not found in $PM3_SRC."
     echo "[*] The Iceman fork repository is large (~300MB+ download)."
-    read -r -p "Would you like to clone and compile it now? [y/N]: " CONFIRM < /dev/tty 2>/dev/null || read -r -p "Would you like to clone and compile it now? [y/N]: " CONFIRM
+    printf "Would you like to download, clone, and compile it now? [y/N]: "
+    if [ -r /dev/tty ]; then
+        read -r CONFIRM < /dev/tty
+    else
+        read -r CONFIRM
+    fi
     if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
-        echo "[*] Cloning Iceman proxmark3 repo to ~/proxmark3..."
-        git clone https://github.com/RfidResearchGroup/proxmark3.git "$HOME/proxmark3"
-        cd "$HOME/proxmark3"
+        echo "[*] Cloning Iceman proxmark3 repo to $PM3_SRC..."
+        if [[ "$PM3_SRC" == /mnt/* ]]; then
+            if ! command -v git.exe >/dev/null 2>&1; then
+                echo "[!] Git for Windows (git.exe) is required to clone into a Windows-mounted path."
+                echo "    Install Git for Windows or choose a path inside the WSL filesystem."
+                exit 1
+            fi
+            windowsPath=$(wslpath -w "$PM3_SRC")
+            git.exe -c core.autocrlf=false -c core.filemode=false clone https://github.com/RfidResearchGroup/proxmark3.git "$windowsPath"
+            git config --global --add safe.directory "$PM3_SRC"
+            git -C "$PM3_SRC" config core.autocrlf false
+            git -C "$PM3_SRC" config core.filemode false
+        else
+            git clone https://github.com/RfidResearchGroup/proxmark3.git "$PM3_SRC"
+        fi
+        cd "$PM3_SRC"
         cat << 'EOF' > Makefile.platform
 PLATFORM=PM3GENERIC
 PLATFORM_EXTRAS=FLASH
@@ -58,14 +81,24 @@ EOF
         echo "[*] Installing client and tools to /usr/local/bin..."
         sudo make install
     else
-        echo "[*] Skipping clone. You can flash the precompiled binaries anytime using .\\flash-firmware.bat."
+        echo "[*] Clone and compile skipped. You can flash the precompiled binaries anytime using .\\flash-firmware.bat."
     fi
+elif [ ! -d "$PM3_SRC/.git" ]; then
+    echo "[!] The directory $PM3_SRC exists but is not a Git repository."
+    echo "    Remove or choose another directory, then run setup again."
+    exit 1
 else
-    echo "[+] Found existing Proxmark3 repo in $HOME/proxmark3."
+    echo "[+] Found existing Proxmark3 repo in $PM3_SRC."
+    if [[ "$PM3_SRC" == /mnt/* ]]; then
+        if ! git config --global --get-all safe.directory 2>/dev/null | grep -Fxq "$PM3_SRC"; then
+            git config --global --add safe.directory "$PM3_SRC"
+        fi
+        git -C "$PM3_SRC" config core.autocrlf false 2>/dev/null || true
+        git -C "$PM3_SRC" config core.filemode false 2>/dev/null || true
+    fi
 fi
 
 echo ""
 echo "=========================================="
 echo " WSL Environment Setup Complete!          "
 echo "=========================================="
-echo "You can now run 'pm3' from any shell."

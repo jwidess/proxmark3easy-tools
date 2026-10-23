@@ -56,6 +56,13 @@ if ($serialPorts) {
 Write-Host ""
 Write-Host "[3/3] Checking USBIPD Status..." -ForegroundColor Yellow
 $usbipdCmd = Get-Command usbipd.exe -ErrorAction SilentlyContinue
+if (-not $usbipdCmd) {
+    $defaultUsbipdDir = Join-Path $env:ProgramFiles "usbipd-win"
+    if (Test-Path (Join-Path $defaultUsbipdDir "usbipd.exe")) {
+        $env:PATH = "$defaultUsbipdDir;$env:PATH"
+        $usbipdCmd = Get-Command usbipd.exe -ErrorAction SilentlyContinue
+    }
+}
 if ($usbipdCmd) {
     try {
         $usbipdOutput = usbipd list
