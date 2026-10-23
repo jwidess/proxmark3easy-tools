@@ -22,27 +22,10 @@ I was sick of not using my Proxmark3 for a few months and then forgetting everyt
 
 ---
 
-## Current Flashed Firmware
+## Current Firmware
 
-- **Compilation & Flash Date:** October 23, 2026
-- **Upstream Branch/Tag:** `Iceman/master/v4.23346-209-gc10930d6e`
-- **Upstream Commit:** [`c10930d6e`](https://github.com/RfidResearchGroup/proxmark3/commit/c10930d6e)
-- **Toolchains:** `arm-none-eabi-gcc 13.2.1 20231009`, Host `GCC 13.3.0`
-- **Configuration File:** [`firmware/Makefile.platform`](./firmware/Makefile.platform)
-
-```makefile
-PLATFORM=PM3GENERIC
-PLATFORM_EXTRAS=FLASH
-LED_ORDER=PM3EASY
-STANDALONE=LF_SAMYRUN
-```
-
-### Config Notes:
-- **`PLATFORM_EXTRAS=FLASH`**: My PM3 has onboard SPI flash memory. Without `PLATFORM_EXTRAS=FLASH`, the firmware cannot use the external flash for emulation memory, which causes commands like `hf mfu eload` and `hf mfu eview` to silently fail.
-- **`LED_ORDER=PM3EASY`**: The Proxmark3 Easy PCB routes LEDs in a different sequence than the RDV4. `PM3EASY` aligns the firmware LED driver with the silkscreen on the board.
-- **`STANDALONE=LF_SAMYRUN`**: Samy Kamkar's HID26 read/clone/sim standalone mode. Fits within the 512KB flash (89% total image).
-
-Full build info and hardware outputs are archived in [`firmware/FIRMWARE_INFO.md`](./firmware/FIRMWARE_INFO.md).
+> [!NOTE]
+> Review **[FIRMWARE_INFO.md ](./firmware/FIRMWARE_INFO.md)** for more info.
 
 ---
 
