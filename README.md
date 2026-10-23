@@ -60,6 +60,16 @@ Windows batch files are located in the repo root:
 
 ---
 
+## 3D Printing
+
+The PM3 Easy is small, lightweight, and somewhat fragile. I highly recommend 3D printing a case for it. I've remixed a slim design from Printables which you can find below.
+
+- [Proxmark3 Easy Slim Case - Improved Remix](https://www.printables.com/model/1372576-proxmark3-easy-slim-case-improved-remix)
+
+![3D printed case for Proxmark3 Easy](pm3easy_3d_case_example.webp)
+
+---
+
 ## Windows Setup
 
 1. **Clone the repo:**
