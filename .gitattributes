@@ -1,0 +1,11 @@
+# Mark firmware binaries as binary (prevent line-ending conversion)
+*.elf binary
+*.bin binary
+*.s19 binary
+
+# Standard text files
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.sh text eol=lf
+*.md text
+Makefile.platform text eol=lf
