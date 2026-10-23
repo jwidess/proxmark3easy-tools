@@ -56,6 +56,7 @@ Windows batch files are located in the repo root:
 | **`check-hardware.bat`** | Runs `hw version`, `hw status`, `hw ping`, `hw tune` to check LF/HF antennas and flash. |
 | **`detect-device.bat`** | Check COM port assignment, Windows PnP status, and USBIPD state. |
 | **`flash-firmware.bat`** | Flashes the repos bundled [`firmware/bootrom.elf`](./firmware/bootrom.elf) and [`firmware/fullimage.elf`](./firmware/fullimage.elf). |
+| **`update-firmware.bat`** | Pulls latest Iceman fork, recompiles PM3 firmware, and updates `firmware/`. |
 
 ---
 
@@ -82,6 +83,15 @@ Windows batch files are located in the repo root:
 
 ---
 
+## Updating Firmware
+
+To update from the latest upstream Iceman fork:
+
+1. Run **`.\update-firmware.bat`** (pulls upstream `~/proxmark3`, compiles, updates `firmware/`, and optionally flashes).
+2. Commit the updated binaries, and update this README and the `FIRMWARE_INFO.md` file with the new build info.
+
+---
+
 ## Repo Structure
 
 ```text
@@ -91,6 +101,7 @@ proxmark3easy-tools/
 ├── check-hardware.bat
 ├── detect-device.bat
 ├── flash-firmware.bat
+├── update-firmware.bat
 ├── firmware/
 │   ├── FIRMWARE_INFO.md
 │   ├── Makefile.platform
@@ -98,11 +109,12 @@ proxmark3easy-tools/
 │   ├── fullimage.elf / .bin
 │   └── recovery.bin
 └── scripts/
-    ├── start-pm3.ps1
+    ├── start-pm3.ps1 / .sh
     ├── detect-device.ps1
     ├── flash-firmware.ps1 / .sh
+    ├── update-firmware.ps1 / .sh
     ├── check-hardware.ps1 / .sh
-    ├── setup-wsl-environment.ps1
+    ├── setup-wsl-environment.ps1 / .sh
     └── button-trick-guide.md
 ```
 

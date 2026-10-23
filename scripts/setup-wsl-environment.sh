@@ -39,26 +39,30 @@ sudo udevadm trigger --action=change || true
 echo ""
 echo "[4/4] Checking Proxmark3 repo in ~/proxmark3..."
 if [ ! -d "$HOME/proxmark3" ]; then
-    echo "[*] Cloning Iceman proxmark3 repo to ~/proxmark3..."
-    git clone https://github.com/RfidResearchGroup/proxmark3.git "$HOME/proxmark3"
-fi
-
-cd "$HOME/proxmark3"
-
-# Configure Makefile.platform
-cat << 'EOF' > Makefile.platform
+    echo "[!] Proxmark3 repository not found in $HOME/proxmark3."
+    echo "[*] The Iceman fork repository is large (~300MB+ download)."
+    read -r -p "Would you like to clone and compile it now? [y/N]: " CONFIRM < /dev/tty 2>/dev/null || read -r -p "Would you like to clone and compile it now? [y/N]: " CONFIRM
+    if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo "[*] Cloning Iceman proxmark3 repo to ~/proxmark3..."
+        git clone https://github.com/RfidResearchGroup/proxmark3.git "$HOME/proxmark3"
+        cd "$HOME/proxmark3"
+        cat << 'EOF' > Makefile.platform
 PLATFORM=PM3GENERIC
 PLATFORM_EXTRAS=FLASH
 LED_ORDER=PM3EASY
 STANDALONE=LF_SAMYRUN
 EOF
-
-echo "[*] Compiling Proxmark3 client and firmware..."
-make clean
-make -j"$(nproc)"
-
-echo "[*] Installing client and tools to /usr/local/bin..."
-sudo make install
+        echo "[*] Compiling Proxmark3 client and firmware..."
+        make clean
+        make -j"$(nproc)"
+        echo "[*] Installing client and tools to /usr/local/bin..."
+        sudo make install
+    else
+        echo "[*] Skipping clone. You can flash the precompiled binaries anytime using .\\flash-firmware.bat."
+    fi
+else
+    echo "[+] Found existing Proxmark3 repo in $HOME/proxmark3."
+fi
 
 echo ""
 echo "=========================================="
