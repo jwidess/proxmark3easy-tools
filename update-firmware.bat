@@ -1,5 +1,5 @@
 @echo off
-title Proxmark3 Easy - Update & Rebuild Firmware
+title Proxmark3 Easy - Update and Rebuild Firmware
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\update-firmware.ps1"
 echo.
 pause
